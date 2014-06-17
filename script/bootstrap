@@ -1,0 +1,62 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+var verifyRequirements = require('./utils/verify-requirements');
+var safeExec = require('./utils/child-process-wrapper.js').safeExec;
+var path = require('path');
+
+// Executes an array of commands one by one.
+function executeCommands(commands, done, index) {
+  index = (index == undefined ? 0 : index);
+  if (index < commands.length) {
+    var command = commands[index];
+    var options = null;
+    if (typeof command !== 'string') {
+      options = command.options;
+      command = command.command;
+    }
+    safeExec(command, options, executeCommands.bind(this, commands, done, index + 1));
+  }
+  else
+    done(null);
+}
+
+function bootstrap() {
+  var apmInstallPath = path.resolve(__dirname, '..', 'apm');
+  if (!fs.existsSync(apmInstallPath))
+    fs.mkdirSync(apmInstallPath);
+  if (!fs.existsSync(path.join(apmInstallPath, 'node_modules')))
+    fs.mkdirSync(path.join(apmInstallPath, 'node_modules'));
+
+  var apmPath = path.resolve(__dirname, '..', 'apm', 'node_modules', 'atom-package-manager', 'bin', 'apm')
+  var apmFlags = process.env.JANKY_SHA1 || process.argv.indexOf('--no-color') !== -1 ? '--no-color' : '';
+
+  var npmPath = path.resolve(__dirname, '..', 'build', 'node_modules', '.bin', 'npm');
+  var initialNpmCommand = fs.existsSync(npmPath) ? npmPath : 'npm';
+  var npmFlags = ' --userconfig=' + path.resolve('.npmrc') + ' ';
+
+  var packagesToDedupe = ['fs-plus', 'humanize-plus', 'oniguruma', 'roaster', 'season', 'grim'];
+  var echoNewLine = process.platform == 'win32' ? 'echo.' : 'echo';
+
+  var commands = [
+    {command: initialNpmCommand + npmFlags + 'install --quiet', options: {cwd: path.resolve(__dirname, '..', 'build'), ignoreStdout: true}},
+    {command: npmPath + npmFlags + 'install --quiet', options: {cwd: apmInstallPath, ignoreStdout: true}},
+    echoNewLine,
+    //apmPath + ' clean ' + apmFlags,
+    apmPath + ' install --quiet ' + apmFlags,
+    apmPath + ' dedupe --quiet ' + apmFlags + ' ' + packagesToDedupe.join(' '),
+  ];
+
+  process.chdir(path.dirname(__dirname));
+  executeCommands(commands, process.exit);
+}
+
+verifyRequirements(function(error, successMessage) {
+  if (error) {
+    console.log(error);
+    process.exit(1);
+  }
+
+  console.log(successMessage);
+  bootstrap();
+});

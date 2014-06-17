@@ -1,0 +1,18 @@
+{
+  "main": "./src/main.js",
+  "name": "atom-ffplay",
+  "version": "0.1.0",
+  "atomShellVersion": "0.13.0",
+  "dependencies": {
+    "bootstrap": "^3.1.1",
+    "coffee-script": "^1.7.0",
+    "gl-matrix": "^2.1.0",
+    "space-pen": "^3.3.0",
+    "theorist": "^1.0.1",
+    "vm-compatibility-layer": "^0.1.0"
+  },
+  "packageDependencies": {},
+  "scripts": {
+    "run": "./atom-shell/Atom.app/Contents/MacOS/Atom ."
+  }
+}
